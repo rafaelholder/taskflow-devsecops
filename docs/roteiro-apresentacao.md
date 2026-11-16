@@ -15,7 +15,7 @@ Mostrar **o repositório, os PRs e a aba Actions**. Plano B: prints em `docs/evi
 
 ## Antes da apresentação
 
-- [ ] `docker compose up -d` e conferir os 5 serviços no ar (4 com healthcheck `healthy`; o promtail não tem)
+- [ ] `docker compose up -d` e conferir os 5 serviços `healthy`
 - [ ] Rodar a força bruta uma vez para "esquentar" o Loki
 - [ ] PRs de demonstração abertos em rascunho e em dia com a `main`: `demo/sqli-regressao` (Semgrep) e `demo/dast-regressao` (ZAP)
 - [ ] Gravar o vídeo plano B (≈3 min: PR vermelho → verde, ZAP, Grafana)

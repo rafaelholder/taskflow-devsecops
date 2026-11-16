@@ -1,12 +1,13 @@
 # Ambiente da TaskFlow com a stack de observabilidade (Módulos 5 e 6).
 #
 #   frontend (bridge)          backend (internal: sem rota para fora)
-#   ┌──────────────┐           ┌──────────────────────────────────────┐
-#   │ taskflow :5000│──logs──▶ │ promtail ──▶ loki (banco de logs)    │
-#   │ grafana  :3000│◀─consulta│                                      │
-#   └──────────────┘           └──────────────────────────────────────┘
+#   ┌──────────────┐           ┌──────────────────────────────────────────┐
+#   │ taskflow :5000│──logs──▶ │ promtail ──▶ loki (banco de logs)        │
+#   │ grafana  :3000│◀─consulta│              grafana-db (PostgreSQL 16)  │
+#   └──────────────┘           └──────────────────────────────────────────┘
 #   Só taskflow e grafana publicam porta, e apenas em 127.0.0.1 (nunca 0.0.0.0).
-#   O Loki - o "banco" deste ambiente - não tem porta no host e vive numa rede interna.
+#   Os BANCOS - PostgreSQL do Grafana e Loki - não têm porta no host e vivem na rede interna:
+#   só o Grafana (que está nas duas redes) alcança o PostgreSQL.
 #   A TaskFlow usa SQLite num volume nomeado: não há servidor de banco nem porta de banco.
 #
 # Segredos: TODOS vêm do .env (fora do Git). O Compose recusa subir se faltar algum
@@ -85,12 +86,47 @@ services:
       resources:
         limits: { cpus: "0.25", memory: 128M }
 
+  # Banco de dados do Grafana (usuários, dashboards, sessões). Antes era um SQLite dentro do
+  # container; agora é um PostgreSQL próprio, isolado na rede backend e SEM porta no host.
+  grafana-db:
+    <<: *endurecido
+    image: postgres@sha256:81e77a4833487b8132fe4b00bedd39dc3f74b8641e387f19312a48f7de218c2e # 16-alpine
+    user: "70:70" # usuário postgres da imagem: o entrypoint não precisa de root nem de capabilities
+    environment:
+      POSTGRES_DB: grafana
+      POSTGRES_USER: grafana
+      POSTGRES_PASSWORD: ${GRAFANA_DB_PASSWORD:?defina GRAFANA_DB_PASSWORD no .env}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - grafana_db_dados:/var/lib/postgresql/data
+    tmpfs:
+      - /var/run/postgresql:uid=70,gid=70,mode=0775
+      - /tmp:size=16m
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grafana -d grafana"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits: { cpus: "0.50", memory: 256M }
+
   grafana:
     <<: *endurecido
     image: grafana/grafana@sha256:35c41e0fd0295f5d0ee5db7e780cf33506abfaf47686196f825364889dee878b # 12.2.1
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?defina GRAFANA_ADMIN_PASSWORD no .env}
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: grafana-db:5432
+      GF_DATABASE_NAME: grafana
+      GF_DATABASE_USER: grafana
+      GF_DATABASE_PASSWORD: ${GRAFANA_DB_PASSWORD:?defina GRAFANA_DB_PASSWORD no .env}
+      # Sem TLS entre Grafana e banco: o tráfego não sai da rede "backend", que é interna (sem
+      # rota para fora e sem porta no host). Em produção: sslmode=verify-full com certificado.
+      GF_DATABASE_SSL_MODE: disable
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
@@ -107,6 +143,7 @@ services:
     networks: [frontend, backend]
     depends_on:
       loki: { condition: service_healthy }
+      grafana-db: { condition: service_healthy }
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/api/health | grep -q ok"]
       interval: 15s
@@ -130,3 +167,4 @@ volumes:
   loki_dados:
   promtail_posicoes:
   grafana_dados:
+  grafana_db_dados:

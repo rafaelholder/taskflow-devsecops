@@ -1,36 +1,65 @@
-# Módulo 2 / Encontro 3 — container Ubuntu auditado pelo Lynis, ANTES e DEPOIS do hardening.
-#   docker build --target antes  -t lynis:antes  -f hardening/Dockerfile.lynis hardening
-#   docker build --target depois -t lynis:depois -f hardening/Dockerfile.lynis hardening
-#   (ou simplesmente: bash hardening/lynis-antes-depois.sh)
+# Modulo 2 / Encontro 3 - o MESMO ambiente da aula (ubuntu:22.04, "lab-hardening") com os
+# Passos 0 a 6 aplicados, auditado pelo Lynis (Passo 7). Dois estagios:
+#   encontro3 : estado ao fim da aula             -> lynis-antes.txt
+#   depois    : + correcao dos 3 achados de maior severidade -> lynis-depois.txt
+# Rodar tudo: bash hardening/lynis-antes-depois.sh
 #
 # Excecoes justificadas aos scanners de IaC (este NAO e um container de aplicacao):
-#checkov:skip=CKV_DOCKER_3:o Lynis audita o SO inteiro (/etc/shadow, sudoers, kernel) e exige root; container efemero, roda e sai
+#checkov:skip=CKV_DOCKER_3:o Lynis audita o SO inteiro (/etc/shadow, sudoers, sshd) e exige root; container efemero, roda e sai
 #checkov:skip=CKV_DOCKER_2:container de auditoria executa um comando e encerra; nao ha servico para healthcheck
+#checkov:skip=CKV2_DOCKER_1:o Passo 1 do Encontro 3 cria o usuario "aluno" com sudo; o pacote e o objeto do hardening auditado, nao e usado no build
 # Trivy config: esta pasta e excluida (skip-dirs) no iac-scan.yml pelo mesmo motivo (AVD-DS-0002).
 
-FROM ubuntu:24.04 AS antes
+FROM ubuntu:22.04 AS encontro3
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Passo 0 - pacotes basicos da aula
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends lynis \
+    && apt-get install -y --no-install-recommends sudo openssh-server ufw fail2ban lynis \
     && rm -rf /var/lib/apt/lists/*
+
+# Passo 1 - usuario nao-root com sudo (o "aluno" da aula)
+RUN useradd --create-home --shell /bin/bash --groups sudo aluno
+
+# Passo 2 - bloquear o login direto do root
+RUN passwd --lock root
+
+# Passo 3 - ufw: negar entrada, permitir saida, liberar so o SSH.
+# Ativar o firewall exige CAP_NET_ADMIN (nao existe num build); a politica fica gravada.
+RUN sed -i 's/^DEFAULT_INPUT_POLICY=.*/DEFAULT_INPUT_POLICY="DROP"/; s/^DEFAULT_OUTPUT_POLICY=.*/DEFAULT_OUTPUT_POLICY="ACCEPT"/' /etc/default/ufw \
+    && sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf \
+    && printf '### tuple ### allow tcp 22 0.0.0.0/0 any 0.0.0.0/0 in\n' >> /etc/ufw/user.rules
+
+# Passo 4 - fail2ban protegendo o SSH
+COPY jail.local /etc/fail2ban/jail.local
+
+# Passo 5 - sshd_config endurecido (material da disciplina), validado com sshd -t
+COPY sshd_config.hardened /etc/ssh/sshd_config
+RUN mkdir -p /run/sshd && sshd -t
+
+# Passo 6 - permissoes: diretorio de aplicacao sem acesso para "outros"
+RUN mkdir -p /srv/taskflow/config \
+    && chown -R aluno:aluno /srv/taskflow \
+    && chmod 750 /srv/taskflow && chmod 700 /srv/taskflow/config
+
+# Passo 7 - auditoria
 CMD ["lynis", "audit", "system", "--quick", "--no-colors"]
 
-FROM antes AS depois
-# Achado 1 - AUTH-9328: umask padrao 022 deixa arquivos novos legiveis por todos.
-#   027: grupo le, "outros" nao leem nada (CIS Ubuntu 5.4.4).
-# Achado 2 - AUTH-9230: hashing de senha com rounds padrao. Mais rounds de SHA-512
-#   encarecem cada tentativa de quebra offline do /etc/shadow (CIS 5.4.1.4).
-# Achado 3 - AUTH-9286: senhas sem idade minima/maxima (CIS 5.4.1.1 e 5.4.1.2).
-RUN sed -i -E 's/^UMASK\s+.*/UMASK\t\t027/' /etc/login.defs \
-    && sed -i -E 's/^PASS_MAX_DAYS\s+.*/PASS_MAX_DAYS\t90/' /etc/login.defs \
-    && sed -i -E 's/^PASS_MIN_DAYS\s+.*/PASS_MIN_DAYS\t1/' /etc/login.defs \
-    && sed -i -E 's/^#?\s*SHA_CRYPT_MIN_ROUNDS.*/SHA_CRYPT_MIN_ROUNDS\t65536/' /etc/login.defs \
-    && sed -i -E 's/^#?\s*SHA_CRYPT_MAX_ROUNDS.*/SHA_CRYPT_MAX_ROUNDS\t65536/' /etc/login.defs \
-    && grep -q '^SHA_CRYPT_MIN_ROUNDS' /etc/login.defs || printf 'SHA_CRYPT_MIN_ROUNDS\t65536\nSHA_CRYPT_MAX_ROUNDS\t65536\n' >> /etc/login.defs
-# Achado 4 - KRNL-5820: core dumps podem gravar memoria de processo (com segredos) em disco.
-RUN printf '* hard core 0\n* soft core 0\n' > /etc/security/limits.d/10-sem-core-dump.conf
-# Achado 5 - DEB-0280: libpam-tmpdir da a cada sessao um $TMPDIR privado (evita corrida em /tmp).
-#            PKGS-7370: debsums permite verificar a integridade dos pacotes instalados.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpam-tmpdir debsums \
-    && rm -rf /var/lib/apt/lists/*
+# ---------------------------------------------------------------------------------------
+FROM encontro3 AS depois
+# Correcao dos 3 achados de MAIOR severidade (os 3 "Warnings" do Lynis no estagio encontro3).
+# Detalhes e justificativa: docs/lynis-achados.md
+
+# Achado 1 - PKGS-7392 "Found one or more vulnerable packages":
+#   aplica as atualizacoes de seguranca pendentes (CIS Ubuntu 1.9).
+# Achado 3 (parte 1) - LOGG-2138 "klogd is not running": instala o rsyslog, que faz o papel
+#   do syslogd/klogd e grava os eventos do sistema (CIS Ubuntu 4.2.1).
+RUN apt-get update     && apt-get upgrade -y     && apt-get install -y --no-install-recommends rsyslog iptables     && rm -rf /var/lib/apt/lists/*
+
+# Achado 2 - FIRE-4512 "iptables module(s) loaded, but no rules active": a politica do Passo 3
+#   so existia no papel. O script ativa o ufw (regras reais no netfilter) antes da auditoria.
+#   Exige CAP_NET_ADMIN, que so altera a pilha de rede DO PROPRIO container (namespace isolado).
+# Achado 3 (parte 2) - o mesmo script sobe o rsyslogd antes do Lynis rodar.
+COPY auditar.sh /usr/local/bin/auditar.sh
+RUN chmod 755 /usr/local/bin/auditar.sh
+CMD ["/usr/local/bin/auditar.sh"]

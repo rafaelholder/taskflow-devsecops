@@ -1,0 +1,8 @@
+# Passo 4 do Encontro 3: fail2ban protegendo o SSH.
+# 5 falhas em 10 minutos -> IP banido por 1 hora.
+[sshd]
+enabled  = true
+port     = 22
+maxretry = 5
+findtime = 10m
+bantime  = 1h

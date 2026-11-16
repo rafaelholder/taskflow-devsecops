@@ -17,7 +17,7 @@ O primeiro commit (`92e4193`) é a linha de base original da disciplina, intacta
 
 ## 1. A esteira
 
-Todos os workflows rodam em `pull_request` e `push` na `main`, têm `workflow_dispatch`, `permissions: contents: read` e **actions de terceiros fixadas por SHA de commit** (imagens por digest). Nenhum usa `continue-on-error`, `--exit-zero` ou `soft_fail`.
+Todos os workflows rodam em `pull_request` e `push` na `main`, têm `workflow_dispatch`, `permissions: contents: read` e **actions de terceiros fixadas por SHA de commit** (imagens por digest). Nenhum usa `continue-on-error`, `--exit-zero` ou `soft_fail`. Nenhum valor de segredo aparece no YAML: a `TASKFLOW_SECRET_KEY` dos jobs que sobem ou testam a app é gerada a cada execução pela action local `.github/actions/chave-efemera` e mascarada no log.
 
 | Workflow | Job (= required check da `main`) | Gate: bloqueia o merge se… | Módulo |
 |---|---|---|---|
@@ -169,7 +169,14 @@ Runbook com condição de disparo, query de detecção e as quatro fases do NIST
 
 ## 8. Demonstração do shift-left
 
-Branch `demo/sqli-regressao`: reintroduz uma query concatenada na busca. O PR fica com **SAST - Semgrep** vermelho e o merge bloqueado; o commit seguinte volta a usar `?` e tudo fica verde. Roteiro completo da apresentação: **[docs/roteiro-apresentacao.md](docs/roteiro-apresentacao.md)**.
+Dois PRs em rascunho, um por tipo de gate:
+
+| Branch | O que reintroduz | Quem bloqueia | Correção ao vivo |
+|---|---|---|---|
+| `demo/sqli-regressao` | query concatenada na busca (SQL injection, A03) | **SAST - Semgrep** (regra `taskflow-sql-concatenado`) e os testes de SQLi | voltar ao placeholder `?` |
+| `demo/dast-regressao` | remove o cabeçalho `Permissions-Policy` (A05) | **ZAP Baseline** (alerta 10063). Os testes passam: nenhum cobre esse cabeçalho, e é por isso que o DAST existe | reaplicar a linha em `app.py` |
+
+Nos dois o merge fica bloqueado pelos required checks até a correção deixar tudo verde. Roteiro completo da apresentação: **[docs/roteiro-apresentacao.md](docs/roteiro-apresentacao.md)**.
 
 ## 9. Estrutura
 
@@ -186,6 +193,7 @@ tests/                         11 testes de segurança (pytest)
 docker-compose.yml · .env.example   app, Loki, Promtail, Grafana e o PostgreSQL do Grafana
 observabilidade/               promtail + provisionamento do Grafana (datasource e dashboard)
 infra/main.tf                  Terraform corrigido (validate + Checkov + Trivy config)
+.github/actions/chave-efemera  TASKFLOW_SECRET_KEY aleatória por execução de CI (nenhum valor fixo no YAML)
 hardening/                     Encontro 3 (ubuntu:22.04, Passos 0–6) + Lynis antes × depois
 scripts/forca_bruta.py         simulador de ataque (só localhost)
 docs/                          runbook, roteiro, evidências antes × depois

@@ -44,7 +44,8 @@ jobs:
       - name: Formatação
         run: ruff format --check .
 
+      - name: Chave de sessão efêmera (aleatória por execução, nunca versionada)
+        uses: ./.github/actions/chave-efemera
+
       - name: Testes
-        env:
-          TASKFLOW_SECRET_KEY: ci-apenas-para-testes-nao-e-segredo-real
         run: pytest -q

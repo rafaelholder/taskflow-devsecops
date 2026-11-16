@@ -48,6 +48,9 @@ jobs:
           exit-code: "1"
           format: table
 
+      - name: Chave de sessão efêmera (aleatória por execução, nunca versionada)
+        uses: ./.github/actions/chave-efemera
+
       - name: Sobe com flags seguras e responde
         # Prova que a imagem funciona com root FS somente leitura, sem capabilities e
         # sem escalada de privilégio - as mesmas flags do docker-compose.yml.
@@ -57,9 +60,9 @@ jobs:
             --tmpfs /app/data:uid=10001,gid=10001 --tmpfs /app/logs:uid=10001,gid=10001 \
             --cap-drop=ALL --security-opt=no-new-privileges \
             -p 5000:5000 \
-            -e TASKFLOW_SECRET_KEY=ci-apenas-para-testes-nao-e-segredo-real \
+            -e TASKFLOW_SECRET_KEY \
             taskflow:ci
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -sf http://localhost:5000/healthz && exit 0
             sleep 1
           done

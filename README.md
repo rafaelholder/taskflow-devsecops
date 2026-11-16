@@ -34,7 +34,9 @@ Todos os workflows rodam em `pull_request` e `push` na `main`, têm `workflow_di
 
 Fora do CI: **Dependabot** (pip, GitHub Actions e Docker, semanal), **CODEOWNERS** e template de PR.
 
-**Proteção da `main`:** PR obrigatório com 1 aprovação de code owner, os 10 checks acima obrigatórios, branch atualizada antes do merge, histórico linear, sem force push, sem exclusão.
+**Proteção da `main`:** PR obrigatório; os 10 checks acima obrigatórios, com a branch atualizada antes do merge; a regra vale **também para administradores** (ninguém faz push direto); histórico linear; conversas resolvidas; sem force push e sem exclusão. Aprovação de revisor: 0 enquanto os demais integrantes não são colaboradores do repositório — com eles adicionados, sobe para 1 aprovação de code owner (`.github/CODEOWNERS`).
+
+**Acesso do professor:** `@HardSource` foi convidado como colaborador. Em repositório pessoal o GitHub não oferece o nível *Read* (só organizações têm permissões granulares); a proteção acima impede qualquer alteração na `main` sem PR e checks verdes.
 
 ### Disparar cada workflow
 

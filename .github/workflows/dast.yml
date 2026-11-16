@@ -24,6 +24,9 @@ jobs:
       - name: Build da imagem
         run: docker build -t taskflow:dast .
 
+      - name: Chave de sessão efêmera (aleatória por execução, nunca versionada)
+        uses: ./.github/actions/chave-efemera
+
       - name: Sobe a aplicação (mesmas flags do hardening)
         run: |
           docker run -d --name taskflow-dast \
@@ -31,7 +34,7 @@ jobs:
             --tmpfs /app/data:uid=10001,gid=10001 --tmpfs /app/logs:uid=10001,gid=10001 \
             --cap-drop=ALL --security-opt=no-new-privileges \
             -p 5000:5000 \
-            -e TASKFLOW_SECRET_KEY=ci-apenas-para-testes-nao-e-segredo-real \
+            -e TASKFLOW_SECRET_KEY \
             taskflow:dast
 
       - name: Espera ativa pelo /login

@@ -1,0 +1,16 @@
+# Gera a TASKFLOW_SECRET_KEY usada pelos jobs que sobem ou testam a aplicação.
+# Por que existe: a chave nunca fica escrita no YAML nem no repositório. Cada execução recebe
+# um valor aleatório novo, mascarado no log (::add-mask::), e ele morre com o runner.
+# Não é um secret do repositório porque não precisa ser: em CI só importa que a chave exista
+# e seja imprevisível; em produção ela vem do .env / secret manager (ver .env.example).
+name: Chave de sessão efêmera
+description: Exporta TASKFLOW_SECRET_KEY aleatória para os passos seguintes do job
+runs:
+  using: composite
+  steps:
+    - name: Gera e mascara a chave
+      shell: bash
+      run: |
+        chave="$(openssl rand -hex 32)"
+        echo "::add-mask::${chave}"
+        echo "TASKFLOW_SECRET_KEY=${chave}" >> "$GITHUB_ENV"

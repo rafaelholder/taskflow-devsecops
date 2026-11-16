@@ -176,7 +176,7 @@ Dois PRs em rascunho, um por tipo de gate:
 | `demo/sqli-regressao` | query concatenada na busca (SQL injection, A03) | **SAST - Semgrep** (regra `taskflow-sql-concatenado`) e os testes de SQLi | voltar ao placeholder `?` |
 | `demo/dast-regressao` | remove o cabeçalho `Permissions-Policy` (A05) | **ZAP Baseline** (alerta 10063). Os testes passam: nenhum cobre esse cabeçalho, e é por isso que o DAST existe | reaplicar a linha em `app.py` |
 
-Nos dois o merge fica bloqueado pelos required checks até a correção deixar tudo verde. Roteiro completo da apresentação: **[docs/roteiro-apresentacao.md](docs/roteiro-apresentacao.md)**.
+Nos dois o merge fica bloqueado pelos required checks até a correção deixar tudo verde.
 
 ## 9. Estrutura
 
@@ -196,5 +196,5 @@ infra/main.tf                  Terraform corrigido (validate + Checkov + Trivy c
 .github/actions/chave-efemera  TASKFLOW_SECRET_KEY aleatória por execução de CI (nenhum valor fixo no YAML)
 hardening/                     Encontro 3 (ubuntu:22.04, Passos 0–6) + Lynis antes × depois
 scripts/forca_bruta.py         simulador de ataque (só localhost)
-docs/                          runbook, roteiro, evidências antes × depois
+docs/                          runbook, achados do Lynis, evidências antes × depois
 ```

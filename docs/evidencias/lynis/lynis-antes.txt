@@ -1,5 +1,5 @@
 
-[ Lynis 3.0.9 ]
+[ Lynis 3.0.7 ]
 
 ################################################################################
   Lynis comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
@@ -17,13 +17,13 @@
 [2C- Checking profiles...[37C [ DONE ]
 
   ---------------------------------------------------
-  Program version:           3.0.9
+  Program version:           3.0.7
   Operating system:          Linux
   Operating system name:     Ubuntu
-  Operating system version:  24.04
+  Operating system version:  22.04
   Kernel version:            6.18.58.1
   Hardware platform:         x86_64
-  Hostname:                  189eb066bf2f
+  Hostname:                  35b2314c6b54
   ---------------------------------------------------
   Profiles:                  /etc/lynis/default.prf
   Log file:                  /var/log/lynis.log
@@ -67,7 +67,7 @@
 [4C- apt-listbugs[43C [ Not Installed ]
 [4C- apt-listchanges[40C [ Not Installed ]
 [4C- needrestart[44C [ Not Installed ]
-[4C- fail2ban[47C [ Not Installed ]
+[4C- fail2ban[47C [ Installed with jail.local ]
 ]
 
 =================================================================
@@ -89,30 +89,8 @@
 =================================================================
 
 
-=================================================================
-
-  Exception found!
-
-  Function/test:  [GetHostID]
-  Message:        No unique host identifier could be created.
-
-  Help improving the Lynis community with your feedback!
-
-  Steps:
-  - Ensure you are running the latest version (/usr/sbin/lynis update check)
-  - If so, create a GitHub issue at https://github.com/CISOfy/lynis
-  - Include relevant parts of the log file or configuration file
-
-  Thanks!
-
-=================================================================
-
-
 [+] Boot and services
 ------------------------------------
-
-  [WARNING]: Test DEB-0880 had a long execution: 10.162772 seconds
-
 [2C- Service Manager[42C [ upstart ]
 [2C- Checking UEFI boot[39C [ DISABLED ]
 [4C- Boot loader[44C [ NONE FOUND ]
@@ -127,10 +105,11 @@
 [2C- Checking Linux kernel configuration file[17C [ FOUND ]
 [2C- Checking default I/O kernel scheduler[20C [ NOT FOUND ]
 grep: /etc/kernel-img.conf: No such file or directory
+[2C- Checking for available kernel update[21C [ UNKNOWN ]
 [2C- Checking core dumps configuration[24C
-[4C- configuration in /etc/profile[26C [ DEFAULT ]
-[4C- 'hard' configuration in /etc/security/limits.conf[6C [ DEFAULT ]
-[4C- 'soft' configuration in /etc/security/limits.conf[6C [ DEFAULT ]
+[4C- configuration in etc/profile[27C [ DEFAULT ]
+[4C- 'hard' configuration in security/limits.conf[11C [ DEFAULT ]
+[4C- 'soft' configuration in security/limits.conf[11C [ DEFAULT ]
 [4C- Checking setuid core dumps configuration[15C [ DISABLED ]
 [2C- Check if reboot is needed[32C [ UNKNOWN ]
 
@@ -154,7 +133,10 @@ grep: /etc/kernel-img.conf: No such file or directory
 [2C- Query system users (non daemons)[25C [ DONE ]
 [2C- NIS+ authentication support[30C [ NOT ENABLED ]
 [2C- NIS authentication support[31C [ NOT ENABLED ]
-[2C- Sudoers file[45C [ NOT FOUND ]
+[2C- Sudoers file(s)[42C [ FOUND ]
+[4C- Permissions for directory: /etc/sudoers.d[14C [ WARNING ]
+[4C- Permissions for: /etc/sudoers[26C [ OK ]
+[4C- Permissions for: /etc/sudoers.d/README[17C [ OK ]
 [2C- PAM password strength tools[30C [ SUGGESTION ]
 [2C- PAM configuration files (pam.conf)[23C [ FOUND ]
 [2C- PAM configuration files (pam.d)[26C [ FOUND ]
@@ -175,7 +157,7 @@ grep: /etc/kernel-img.conf: No such file or directory
 [+] Shells
 ------------------------------------
 [2C- Checking shells from /etc/shells[25C
-[4CResult: found 7 shells (valid shells: 7).[16C
+[4CResult: found 8 shells (valid shells: 8).[16C
 [4C- Session timeout settings/tools[25C [ NONE ]
 [2C- Checking default umask values[28C
 [4C- Checking default umask in /etc/bash.bashrc[13C [ NONE ]
@@ -226,7 +208,7 @@ grep: /etc/kernel-img.conf: No such file or directory
 [4C- Searching dpkg package manager[25C [ FOUND ]
 [6C- Querying package manager[29C
 [4C- Query unpurged packages[32C [ NONE ]
-[2C- Checking security repository in sources.list.d directory[1C [ OK ]
+[2C- Checking security repository in sources.list file[8C [ OK ]
 [2C- Checking APT package database[28C [ OK ]
 [2C- Checking vulnerable packages[29C [ WARNING ]
 [2C- Checking upgradeable packages[28C [ SKIPPED ]
@@ -355,6 +337,15 @@ grep: /etc/kernel-img.conf: No such file or directory
 [+] Software: firewalls
 ------------------------------------
 [2C- Checking iptables support[32C [ FOUND ]
+[4C- Checking iptables policies of chains[19C [ FOUND ]
+iptables v1.8.7 (nf_tables): Could not fetch rule set generation id: Permission denied (you must be root)
+
+[4C- Checking for empty ruleset[29C [ WARNING ]
+iptables v1.8.7 (nf_tables): Could not fetch rule set generation id: Permission denied (you must be root)
+
+[4C- Checking for unused rules[30C [ OK ]
+iptables-save v1.8.7 (nf_tables): Could not fetch rule set generation id: Permission denied (you must be root)
+
 [2C- Checking host based firewall[29C [ ACTIVE ]
 
 [+] Software: webserver
@@ -464,12 +455,13 @@ grep: /etc/kernel-img.conf: No such file or directory
 ------------------------------------
 [2C- Checking automation tooling[30C
 [2C- Automation tooling[39C [ NOT FOUND ]
-[2C- Checking for IDS/IPS tooling[29C [ NONE ]
+[2C- Checking presence of Fail2ban[28C [ FOUND ]
+2026-11-16 19:28:59,060 fail2ban.jailreader     [16989]: WARNING Have not found any log file for sshd jail
+[4C- Checking Fail2ban jails[32C [ ENABLED ]
+[2C- Checking for IDS/IPS tooling[29C [ FOUND ]
 
 [+] Software: Malware
 ------------------------------------
-pgrep: pattern that searches for process name longer than 15 characters will result in zero matches
-Try `pgrep -f' option to match against the complete command line.
 [2C- Malware software components[30C [ NOT FOUND ]
 
 [+] File Permissions
@@ -477,10 +469,13 @@ Try `pgrep -f' option to match against the complete command line.
 [2C- Starting file permissions check[26C
 [4CFile: /etc/group[41C [ OK ]
 [4CFile: /etc/group-[40C [ OK ]
+[4CFile: /etc/hosts.allow[35C [ OK ]
+[4CFile: /etc/hosts.deny[36C [ OK ]
 [4CFile: /etc/issue[41C [ OK ]
 [4CFile: /etc/issue.net[37C [ OK ]
 [4CFile: /etc/passwd[40C [ OK ]
 [4CFile: /etc/passwd-[39C [ OK ]
+[4CFile: /etc/ssh/sshd_config[31C [ SUGGESTION ]
 [4CDirectory: /etc/cron.d[35C [ SUGGESTION ]
 [4CDirectory: /etc/cron.daily[31C [ SUGGESTION ]
 
@@ -545,17 +540,20 @@ Try `pgrep -f' option to match against the complete command line.
 
 ================================================================================
 
-  -[ Lynis 3.0.9 Results ]-
+  -[ Lynis 3.0.7 Results ]-
 
-  Warnings (2):
+  Warnings (3):
   ----------------------------
   ! Found one or more vulnerable packages. [PKGS-7392] 
       https://cisofy.com/lynis/controls/PKGS-7392/
 
+  ! iptables module(s) loaded, but no rules active [FIRE-4512] 
+      https://cisofy.com/lynis/controls/FIRE-4512/
+
   ! klogd is not running, which could lead to missing kernel messages in log files [LOGG-2138] 
       https://cisofy.com/lynis/controls/LOGG-2138/
 
-  Suggestions (40):
+  Suggestions (39):
   ----------------------------
   * This release is more than 4 months old. Check the website or GitHub to see if there is an update available. [LYNIS] 
       https://cisofy.com/lynis/controls/LYNIS/
@@ -571,9 +569,6 @@ Try `pgrep -f' option to match against the complete command line.
 
   * Install needrestart, alternatively to debian-goodies, so that you can run needrestart after upgrades to determine which daemons are using old versions of libraries and need restarting. [DEB-0831] 
       https://cisofy.com/lynis/controls/DEB-0831/
-
-  * Install fail2ban to automatically ban hosts that commit multiple authentication errors. [DEB-0880] 
-      https://cisofy.com/lynis/controls/DEB-0880/
 
   * Determine runlevel and services at startup [BOOT-5180] 
       https://cisofy.com/lynis/controls/BOOT-5180/
@@ -693,8 +688,8 @@ Try `pgrep -f' option to match against the complete command line.
 
   Lynis security scan details:
 
-  Hardening index : 58 [###########         ]
-  Tests performed : 229
+  Hardening index : 61 [############        ]
+  Tests performed : 233
   Plugins enabled : 1
 
   Components:
@@ -724,7 +719,7 @@ Try `pgrep -f' option to match against the complete command line.
 
 ================================================================================
 
-  Lynis 3.0.9
+  Lynis 3.0.7
 
   Auditing, system hardening, and compliance for UNIX-based systems
   (Linux, macOS, BSD, and others)

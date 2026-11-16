@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titulo %}Minhas tarefas{% endblock %}
+{% block cabecalho %}Minhas tarefas ({{ username }}){% endblock %}
+{% block conteudo %}
+    <form method="get">
+        {# O termo buscado volta ao campo escapado: fecha o XSS refletido via "q". #}
+        <input type="text" name="q" placeholder="buscar tarefa" maxlength="100" value="{{ search }}">
+        <input type="submit" value="Buscar">
+    </form>
+
+    <ul>
+        {% for task in tasks %}
+        <li>
+            {# title e description vieram do usuario: autoescape os torna texto, nunca HTML. #}
+            <b>{{ task['title'] }}</b> - {{ task['description'] }}
+            {% if task['done'] %}(feita){% endif %}
+        </li>
+        {% else %}
+        <li><em>Nenhuma tarefa encontrada.</em></li>
+        {% endfor %}
+    </ul>
+
+    <a href="{{ url_for('new_task') }}">Nova tarefa</a> |
+    <a href="{{ url_for('logout') }}">Sair</a>
+{% endblock %}

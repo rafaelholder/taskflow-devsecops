@@ -1,0 +1,9 @@
+target-version = "py312"
+line-length = 100
+
+[lint]
+# E/F: erros e estilo basicos · B: bugbear · S: regras de seguranca (bandit) · UP: modernizacao
+select = ["E", "F", "B", "S", "UP"]
+# S101 (assert) so em testes; S105/S106 seriam "senha hardcoded" - as credenciais de
+# laboratorio em app.py estao documentadas e guardadas como hash, ver comentario no codigo.
+per-file-ignores = { "tests/*" = ["S101"] }

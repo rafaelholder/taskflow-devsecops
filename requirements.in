@@ -1,0 +1,9 @@
+# Dependencias DIRETAS da aplicacao. O requirements.txt (com hashes) e GERADO a partir
+# deste arquivo - nunca editado a mao:
+#   uv pip compile requirements.in --generate-hashes --python-version 3.12 -o requirements.txt
+#
+# Removidas em relacao a linha de base: PyYAML e requests (a aplicacao nao os importa;
+# dependencia sem uso e superficie de ataque sem beneficio - 3 das 5 bibliotecas com CVE
+# na linha de base sairam por aqui).
+flask
+gunicorn

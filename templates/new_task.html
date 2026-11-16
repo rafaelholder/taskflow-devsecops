@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block titulo %}Nova tarefa{% endblock %}
+{% block cabecalho %}Nova tarefa{% endblock %}
+{% block conteudo %}
+    {% if error %}
+        <p role="alert" style="color:red">{{ error }}</p>
+    {% endif %}
+    <form method="post">
+        <label>Titulo: <input type="text" name="title" maxlength="200" required></label><br>
+        <label>Descricao: <textarea name="description" maxlength="2000"></textarea></label><br>
+        <input type="submit" value="Salvar">
+    </form>
+    <a href="{{ url_for('tasks') }}">Voltar para minhas tarefas</a>
+{% endblock %}

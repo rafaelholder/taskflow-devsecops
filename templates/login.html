@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titulo %}Login{% endblock %}
+{% block cabecalho %}Login{% endblock %}
+{% block conteudo %}
+    <form method="post" autocomplete="off">
+        <label>Usuario: <input type="text" name="username" maxlength="150" required></label><br>
+        <label>Senha: <input type="password" name="password" required></label><br>
+        <input type="submit" value="Entrar">
+    </form>
+
+    {% if error %}
+        {# Mensagem de erro escapada: entrada do usuario nunca vira HTML (XSS refletido). #}
+        <p role="alert" style="color:red">{{ error }}</p>
+    {% endif %}
+{% endblock %}

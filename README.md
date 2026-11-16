@@ -9,7 +9,7 @@
 
 Lab final de **DevSecOps (CS031) — CESAR School, 2026.2**. A TaskFlow, aplicação Flask vulnerável de propósito, passa a ser protegida por uma esteira no GitHub Actions que **bloqueia o merge** quando o código, as dependências, a imagem, a aplicação em execução ou a infraestrutura têm problemas; o ambiente sobe por Compose endurecido; e um ataque de força bruta é detectado no Grafana e tratado por um runbook.
 
-**Grupo** ⚠️ *preencher nomes e papéis* · **Professores:** Cris Apolinário e Diego Buarque
+**Grupo:** Rafael Holder · Arthur Leandro · Maria Clara Miranda · André · Gabriel Peixoto · **Professores:** Cris Apolinário e Diego Buarque
 
 O primeiro commit (`92e4193`) é a linha de base original da disciplina, intacta. Tudo depois dele é trabalho do grupo, então `git diff 92e4193` mostra exatamente o que mudou.
 

@@ -1,0 +1,26 @@
+# Módulo 3 — o SCA de amanhã: CVE nova em dependência conhecida vira PR automático.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security"]
+    commit-message:
+      prefix: "sca"
+      include: "scope"
+
+  # As actions também são dependência de terceiros. Como estão fixadas por SHA, o
+  # Dependabot atualiza o SHA e o comentário de versão juntos.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "ci"]
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]

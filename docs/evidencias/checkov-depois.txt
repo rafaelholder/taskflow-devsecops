@@ -1,0 +1,13 @@
+terraform scan results:
+
+Passed checks: 41, Failed checks: 0, Skipped checks: 6
+
+dockerfile scan results:
+
+Passed checks: 147, Failed checks: 0, Skipped checks: 2
+
+github_actions scan results:
+
+Passed checks: 164, Failed checks: 0, Skipped checks: 0
+
+

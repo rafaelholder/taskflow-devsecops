@@ -1,0 +1,8 @@
+# Revisão obrigatória: a proteção da main exige aprovação de um code owner.
+# Tudo que toca a esteira, a imagem ou a infraestrutura passa pelo grupo inteiro.
+# ⚠️ adicionar os logins dos demais integrantes do grupo.
+*                   @rafaelholder
+/.github/           @rafaelholder
+/Dockerfile         @rafaelholder
+/infra/             @rafaelholder
+/docker-compose.yml @rafaelholder

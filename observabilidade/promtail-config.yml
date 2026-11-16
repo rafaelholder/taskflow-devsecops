@@ -1,0 +1,35 @@
+# Promtail: lê o arquivo de log JSON da TaskFlow (volume compartilhado, somente leitura)
+# e envia ao Loki. "event", "level" e "result" viram labels (filtros rápidos); campos de
+# alta cardinalidade (ip, username, request_id) ficam no corpo e são extraídos na consulta
+# com "| json" - label com valor por IP explodiria o índice do Loki.
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: taskflow
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: taskflow
+          __path__: /var/log/taskflow/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            event: event
+            result: result
+            timestamp: timestamp
+      - labels:
+          level:
+          event:
+          result:
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano

@@ -1,0 +1,63 @@
+# Regras do projeto: transformam as correcoes do TaskFlow em invariantes do pipeline.
+# Se alguem reintroduzir uma das falhas da linha de base, o job "SAST - Semgrep" fica vermelho.
+rules:
+  - id: taskflow-template-safe-filter
+    languages: [generic]
+    paths:
+      include: ["templates/*.html"]
+    pattern-regex: '\|\s*safe\b'
+    message: >-
+      Filtro "| safe" desliga o autoescape do Jinja2 e reabre o XSS armazenado corrigido no
+      Modulo 4. Renderize o valor com {{ valor }} sem "safe".
+    severity: ERROR
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021 - Injection"
+
+  - id: taskflow-markup-de-entrada
+    languages: [python]
+    pattern-either:
+      - pattern: flask.Markup(...)
+      - pattern: markupsafe.Markup(...)
+    message: Markup() marca texto como HTML confiavel; com dado do usuario e XSS.
+    severity: ERROR
+    metadata:
+      cwe: "CWE-79"
+
+  - id: taskflow-flask-debug-ligado
+    languages: [python]
+    pattern: $APP.run(..., debug=True, ...)
+    message: >-
+      debug=True expoe o debugger interativo do Werkzeug (execucao remota de codigo).
+      Use FLASK_DEBUG, desligado por padrao.
+    severity: ERROR
+    metadata:
+      cwe: "CWE-489"
+
+  - id: taskflow-formulario-inteiro-no-log
+    languages: [python]
+    pattern-either:
+      - pattern: '$LOG.$LEVEL(..., extra={..., $K: request.form, ...}, ...)'
+      - pattern: '$LOG.$LEVEL(..., request.form, ...)'
+      - pattern: '$LOG.$LEVEL(..., extra={..., $K: request.form.get("password", ...), ...}, ...)'
+      - pattern: '$LOG.$LEVEL(..., extra={..., $K: password, ...}, ...)'
+    message: >-
+      O formulario (ou a senha) indo para o log coloca credenciais no Loki. Logue apenas os
+      campos necessarios (username, ip, resultado, request_id).
+    severity: ERROR
+    metadata:
+      cwe: "CWE-532"
+
+  - id: taskflow-sql-concatenado
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $DB.execute($A + $B, ...)
+          - pattern: $DB.execute(f"...", ...)
+          - pattern: $DB.execute("..." % $X, ...)
+          - pattern: $DB.execute($S.format(...), ...)
+    message: SQL montado por concatenacao/formatacao. Use placeholders "?" com parametros.
+    severity: ERROR
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021 - Injection"

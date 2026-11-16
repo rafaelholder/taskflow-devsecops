@@ -1,0 +1,70 @@
+# Módulo 2 — Hardening da imagem: builda o MESMO Dockerfile que vai para produção e
+# aplica três gates: Trivy (HIGH,CRITICAL com correção), nenhum segredo nas camadas e
+# o container de fato sobe com as flags de runtime seguras.
+name: Hardening - Imagem
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  imagem:
+    name: Build + Trivy + flags de runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build da imagem (Dockerfile da raiz, o único do repositório)
+        run: docker build -t taskflow:ci .
+
+      - name: Camadas da imagem (docker history) e gate de segredo em ENV/ARG
+        # A linha de base tinha ENV ADMIN_PASSWORD=admin123 gravado na camada.
+        # Se qualquer camada declarar ENV/ARG com PASSWORD, SECRET, TOKEN ou KEY, o job falha.
+        run: |
+          docker history --no-trunc --format '{{.CreatedBy}}' taskflow:ci | tee historico.txt
+          if grep -iE '^(ENV|ARG) .*(PASSWORD|SECRET|TOKEN|API_KEY)' historico.txt; then
+            echo "::error::segredo em ENV/ARG na imagem"; exit 1
+          fi
+          echo "USER efetivo: $(docker inspect --format '{{.Config.User}}' taskflow:ci)"
+          test "$(docker inspect --format '{{.Config.User}}' taskflow:ci)" = "taskflow"
+
+      - name: Trivy image (gate: HIGH,CRITICAL com correção disponível)
+        # ignore-unfixed: a imagem base Debian carrega CVEs sem patch do fornecedor; bloquear
+        # por elas tornaria o gate permanente e inútil. O que TEM correção bloqueia.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: taskflow:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      - name: Sobe com flags seguras e responde
+        # Prova que a imagem funciona com root FS somente leitura, sem capabilities e
+        # sem escalada de privilégio - as mesmas flags do docker-compose.yml.
+        run: |
+          docker run -d --name taskflow-ci \
+            --read-only --tmpfs /tmp \
+            --tmpfs /app/data:uid=10001,gid=10001 --tmpfs /app/logs:uid=10001,gid=10001 \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            -p 5000:5000 \
+            -e TASKFLOW_SECRET_KEY=ci-apenas-para-testes-nao-e-segredo-real \
+            taskflow:ci
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5000/healthz && exit 0
+            sleep 1
+          done
+          docker logs taskflow-ci; exit 1
+
+      - name: Encerra o container
+        if: always()
+        run: docker rm -f taskflow-ci || true

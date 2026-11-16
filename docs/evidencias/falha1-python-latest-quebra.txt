@@ -1,0 +1,3 @@
+    loader = pkgutil.get_loader(root_mod_name)
+             ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'pkgutil' has no attribute 'get_loader'

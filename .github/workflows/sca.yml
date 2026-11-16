@@ -1,0 +1,52 @@
+# Módulo 3 — SCA: dependências de terceiros. pip-audit é o gate; Trivy fs é a segunda fonte.
+name: SCA - Dependências
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 9 * * 1" # segunda, 09:00 UTC: CVE nova em dependência antiga aparece mesmo sem PR
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    name: SCA - pip-audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: pip-audit sobre requirements.txt (gate)
+        # Sem --ignore-vuln e sem exit-zero: qualquer CVE conhecida bloqueia o merge.
+        run: |
+          pip install pip-audit==2.7.3
+          pip-audit --require-hashes -r requirements.txt --strict
+
+  trivy-fs:
+    name: SCA - Trivy fs (segunda fonte)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Trivy fs (HIGH,CRITICAL com correção disponível)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

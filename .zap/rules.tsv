@@ -1,0 +1,27 @@
+# Regras do ZAP Baseline. Formato: ID<TAB>ACAO<TAB>NOME. Linhas com # sao ignoradas pelo ZAP.
+# Politica do grupo: so rebaixamos o que e INFORMATIVO (nao e vulnerabilidade) ou consequencia
+# de um controle de seguranca deliberado. Todo o resto continua com a acao padrao, e qualquer
+# alerta faz o job falhar (fail_action: true no dast.yml).
+#
+# 10049 Non-Storable Content: o alerta aparece PORQUE enviamos Cache-Control: no-store em
+#   todas as respostas (paginas com dados do usuario nao devem ficar em cache compartilhado).
+#   E o controle funcionando, nao uma falha.
+#
+# 10111 Authentication Request Identified: informativo. O ZAP apenas reconheceu que /login
+#   e um formulario de autenticacao (o proprio ZAP o classifica como Informational).
+#
+# 10112 Session Management Response Identified: informativo. O ZAP identificou o cookie de
+#   sessao; os atributos dele (HttpOnly, SameSite) sao verificados pelas regras 10010/10054.
+#
+# 10031 User Controllable HTML Element Attribute (Potential XSS): heuristica Informational.
+#   O ZAP envia o csrf_token no POST /login e o encontra no value= do campo oculto - valor
+#   gerado pelo servidor e escapado pelo Jinja2. Fica como INFO (aparece no relatorio, nao
+#   bloqueia). XSS real em atributo continua coberto: teste test_xss_refletido_no_parametro_q
+#   e regra Semgrep taskflow-template-safe-filter.
+#
+# Nao rebaixados (e corrigidos no codigo): 10202 Absence of Anti-CSRF Tokens -> token
+#   sincronizador em todo POST; 90004 Cross-Origin-Embedder-Policy -> COEP/COOP/CORP.
+10049	IGNORE	(Non-Storable Content - efeito do Cache-Control: no-store deliberado)
+10111	IGNORE	(Authentication Request Identified - informativo)
+10112	IGNORE	(Session Management Response Identified - informativo)
+10031	INFO	(User Controllable HTML Element Attribute - token CSRF do servidor, escapado)

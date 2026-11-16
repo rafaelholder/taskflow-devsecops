@@ -1,0 +1,13 @@
+# Evidência: força bruta detectada no Loki (query do runbook)
+# capturado em 2026-11-16T10:31:59-03:00
+
+## sum by (ip) (count_over_time({job="taskflow", event="login_attempt", result="failure"} | json [10m]))
+   {'ip': '172.20.0.1'} => 58
+
+## sum by (ip, username) (count_over_time({job="taskflow", event="login_attempt", result="success"} | json [10m]))
+   {'ip': '172.20.0.1', 'username': 'admin'} => 2
+
+## Linhas brutas (últimas 3 falhas)
+{"timestamp": "2026-11-16T13:31:29.004681+00:00", "level": "WARNING", "logger": "taskflow", "message": "login falhou", "event": "login_attempt", "result": "failure", "username": "admin", "ip": "172.20.0.1", "request_id": "9d2a821e-b15e-4936-98f4-59977f518590"}
+{"timestamp": "2026-11-16T13:31:29.286684+00:00", "level": "WARNING", "logger": "taskflow", "message": "login falhou", "event": "login_attempt", "result": "failure", "username": "admin", "ip": "172.20.0.1", "request_id": "c6f4ecd1-a922-4f36-8bdb-9a7b88b52e32"}
+{"timestamp": "2026-11-16T13:31:29.590317+00:00", "level": "WARNING", "logger": "taskflow", "message": "login falhou", "event": "login_attempt", "result": "failure", "username": "admin", "ip": "172.20.0.1", "request_id": "46329e35-93ff-47b8-85be-32889afe667b"}

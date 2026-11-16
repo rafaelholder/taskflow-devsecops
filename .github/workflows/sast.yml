@@ -1,0 +1,54 @@
+# Módulo 3 — SAST (Semgrep) e secret scanning (Gitleaks) como gates bloqueantes.
+# As duas ferramentas rodam pela imagem oficial, fixada por DIGEST (não por tag).
+name: SAST e Secret Scanning
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: semgrep/semgrep@sha256:cc1b68266f267878b39739373ea9985b9a78e5d64497dd875c8de100b22695ed
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Semgrep (python, flask, security-audit + regras do projeto)
+        # --error: qualquer achado = exit 1 = check vermelho. Sem "nosemgrep" sem justificativa.
+        run: |
+          semgrep scan \
+            --config p/python \
+            --config p/flask \
+            --config p/security-audit \
+            --config .semgrep/taskflow.yml \
+            --exclude docs \
+            --metrics=off \
+            --error
+
+  gitleaks:
+    name: Secret scanning - Gitleaks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (histórico completo)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Gitleaks varre TODOS os commits, não só o HEAD
+
+      - name: Gitleaks (histórico completo, config do repositório)
+        # .gitleaks.toml estende as regras padrão com a regra do SECRET_KEY do Flask e
+        # allowlista APENAS o commit da linha de base didática, por hash, com justificativa.
+        run: |
+          docker run --rm -v "$PWD:/repo" \
+            zricethezav/gitleaks@sha256:e1b35e12a8c6fa8901f060459cfb6b2fc4c484d3afbe3b029733a3bbfab07055 \
+            detect --source /repo --config /repo/.gitleaks.toml --redact --exit-code 1 --no-banner

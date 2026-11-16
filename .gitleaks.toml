@@ -1,0 +1,29 @@
+# Configuração do Gitleaks do grupo. Estende as regras padrão (não as substitui).
+title = "taskflow-devsecops"
+
+[extend]
+useDefault = true
+
+# A SECRET_KEY hardcoded do Flask da linha de base ("s3gr3d0-super-secreto-...") NÃO é
+# acusada pelas regras padrão do Gitleaks (verificado localmente com a v8.24.3: 0 achados).
+# Esta regra fecha a lacuna: qualquer atribuição literal de SECRET_KEY no código bloqueia.
+[[rules]]
+id = "taskflow-flask-secret-key"
+description = "SECRET_KEY do Flask atribuída com valor literal no código"
+regex = '''(?i)SECRET_KEY["'\]]*\s*[:=]\s*["'][^"'\s]{8,}["']'''
+keywords = ["SECRET_KEY"]
+
+[allowlist]
+description = "Exceções justificadas. Cada uma aponta para um commit ou caminho específico."
+# O commit inicial é a linha de base DIDÁTICA da disciplina, mantida de propósito no
+# histórico para que a esteira tenha um "antes" real. O segredo que ele contém é público
+# (está no material da disciplina) e nunca foi usado fora do laboratório.
+# Regra do grupo: allowlist por commit, nunca desligando a regra nem o job.
+commits = ["92e4193a8ef75065c2c02fa717f3327cdc0134ea"]
+paths = [
+  '''\.gitleaks\.toml$''',       # este arquivo cita o padrão da regra
+  '''docs/evidencias/.*''',     # saídas de scanners citam o achado original
+]
+regexes = [
+  '''troque-por-[a-z0-9-]+''',  # placeholders do .env.example, não são valores reais
+]

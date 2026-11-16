@@ -1,0 +1,59 @@
+# Módulo 4 — DAST: a aplicação sobe DENTRO do runner e é atacada pelo OWASP ZAP Baseline.
+# O gate é o .zap/rules.tsv: alerta não rebaixado explicitamente = FAIL = merge bloqueado.
+name: DAST - OWASP ZAP
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    name: ZAP Baseline contra a app no runner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build da imagem
+        run: docker build -t taskflow:dast .
+
+      - name: Sobe a aplicação (mesmas flags do hardening)
+        run: |
+          docker run -d --name taskflow-dast \
+            --read-only --tmpfs /tmp \
+            --tmpfs /app/data:uid=10001,gid=10001 --tmpfs /app/logs:uid=10001,gid=10001 \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            -p 5000:5000 \
+            -e TASKFLOW_SECRET_KEY=ci-apenas-para-testes-nao-e-segredo-real \
+            taskflow:dast
+
+      - name: Espera ativa pelo /login
+        # Sem isto o ZAP "ataca o nada" e o relatório sai limpo por engano.
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/login > /dev/null; then
+              echo "aplicação respondendo após ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::aplicação não respondeu"; docker logs taskflow-dast; exit 1
+
+      - name: OWASP ZAP Baseline (gate)
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: "http://localhost:5000"
+          rules_file_name: ".zap/rules.tsv"
+          fail_action: true
+          allow_issue_writing: false
+          artifact_name: zap-baseline-report
+
+      - name: Encerra o container
+        if: always()
+        run: docker rm -f taskflow-dast || true

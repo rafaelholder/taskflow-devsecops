@@ -16,6 +16,9 @@ referencia ao modulo da disciplina em que cada item foi tratado:
     - cabecalhos de seguranca            -> CSP, X-Frame-Options, nosniff, Referrer-Policy,
                                             Permissions-Policy, Cache-Control: no-store
     - cookie de sessao                   -> HttpOnly + SameSite=Lax (+ Secure via variavel)
+    - CSRF (achado do ZAP 10202)         -> token sincronizador por sessao em todo POST,
+                                            comparado em tempo constante; sem token = 400
+    - isolamento cross-origin (ZAP 90004)-> COOP, COEP e CORP
   Modulo 6 (observabilidade)
     - logging estruturado em JSON (uma linha por evento) em stdout e em arquivo
     - request_id (UUID v4) por requisicao, presente em todo log daquela requisicao
@@ -28,9 +31,11 @@ forca bruta ACONTECA e seja DETECTADA pelos logs e tratada pelo runbook; bloquea
 aplicacao esconderia o sinal. Ver docs/runbook-forca-bruta.md.
 """
 
+import hmac
 import json
 import logging
 import os
+import secrets
 import sqlite3
 import time
 import uuid
@@ -38,7 +43,7 @@ from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from flask import Flask, g, redirect, render_template, request, session, url_for
+from flask import Flask, abort, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # ---------------------------------------------------------------------------
@@ -204,10 +209,37 @@ def ip_cliente() -> str:
     return request.remote_addr or "desconhecido"
 
 
+def csrf_token() -> str:
+    """Token sincronizador da sessao (um por sessao, renovado no login)."""
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_urlsafe(32)
+    return session["csrf_token"]
+
+
+app.jinja_env.globals["csrf_token"] = csrf_token
+
+
 @app.before_request
 def iniciar_requisicao():
     g.request_id = str(uuid.uuid4())
     g.inicio = time.perf_counter()
+
+    # CSRF: todo metodo que altera estado exige o token do formulario igual ao da sessao.
+    # compare_digest evita vazar o token por diferenca de tempo de comparacao.
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        enviado = request.form.get("csrf_token", "")
+        esperado = session.get("csrf_token", "")
+        if not esperado or not hmac.compare_digest(enviado, esperado):
+            logger.warning(
+                "requisicao sem token CSRF valido",
+                extra={
+                    "event": "csrf_rejected",
+                    "path": request.path,
+                    "ip": ip_cliente(),
+                    "request_id": g.request_id,
+                },
+            )
+            abort(400)
 
 
 @app.after_request
@@ -220,6 +252,9 @@ def finalizar_requisicao(response):
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cache-Control"] = "no-store"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     response.headers["X-Request-ID"] = g.get("request_id", "")
 
     duracao_ms = round((time.perf_counter() - g.get("inicio", time.perf_counter())) * 1000, 2)
@@ -266,9 +301,11 @@ def login():
         user = get_db().execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
 
         if user and check_password_hash(user["password"], password):
+            # Nova sessao no login (evita fixacao de sessao) com token CSRF novo.
             session.clear()
             session["user_id"] = user["id"]
             session["username"] = user["username"]
+            csrf_token()
             logger.info(
                 "login bem-sucedido",
                 extra={

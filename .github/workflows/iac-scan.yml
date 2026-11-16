@@ -1,0 +1,74 @@
+# Módulo 5 — IaC: Terraform e Compose passam pelo mesmo rigor do código.
+#
+# Decisão: SEM filtro "paths:". Este workflow é required check da main; um check que só
+# roda quando um .tf muda deixaria PRs de código travados esperando um check que nunca
+# chega. Rodar sempre custa ~1 min e mantém o gate honesto.
+name: IaC - Checkov, Trivy config e terraform validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkov:
+    name: IaC - Checkov (terraform + dockerfile + github_actions)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Checkov
+        # Todo "checkov:skip" leva justificativa no próprio arquivo (regra do grupo).
+        uses: bridgecrewio/checkov-action@3f0caf0c3aa9f56ade6b49f6e60b63aaeafb75a3 # v12.3141.0
+        with:
+          directory: .
+          framework: terraform,dockerfile,github_actions
+          quiet: true
+          soft_fail: false
+          output_format: cli
+
+  trivy-config:
+    name: IaC - Trivy config (tfsec + compose + Dockerfile)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Trivy config
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          # hardening/ contem SO o container de auditoria do Lynis, que precisa rodar como root
+          # para ler o sistema (AVD-DS-0002). Excluido so desta ferramenta e so esta pasta: o
+          # Checkov ainda a escaneia (com skips justificados) e o Dockerfile da aplicacao
+          # continua sob a regra.
+          skip-dirs: hardening
+
+  terraform-validate:
+    name: IaC - terraform validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: terraform init -backend=false && validate
+        # Só sintaxe e consistência: não toca na AWS, não precisa de credencial.
+        run: |
+          docker run --rm -v "$PWD/infra:/infra" -w /infra \
+            hashicorp/terraform@sha256:18f9986038bbaf02cf49db9c09261c778161c51dcc7fb7e355ae8938459428cd \
+            init -backend=false -input=false
+          docker run --rm -v "$PWD/infra:/infra" -w /infra \
+            hashicorp/terraform@sha256:18f9986038bbaf02cf49db9c09261c778161c51dcc7fb7e355ae8938459428cd \
+            validate

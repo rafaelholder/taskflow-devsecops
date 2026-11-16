@@ -1,0 +1,12 @@
+CREATED BY                                                                                                                                                      
+CMD ["gunicorn" "--bind" "0.0.0.0:5000" "--workers" "2" "--access-logfile" "-" "app:app"]                                                                       
+HEALTHCHECK {Test:[CMD python -c import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/healthz', timeout=3)] Interval:30s Timeout:5s StartPeriod:
+USER taskflow                                                                                                                                                   
+RUN /bin/sh -c groupadd --system --gid 10001 taskflow     && useradd --system --uid 10001 --gid taskflow --no-create-home --shell /usr/sbin/nologin taskflow    
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TASKFLOW_DB_PATH=/app/data/taskflow.db TASKFLOW_LOG_DIR=/app/logs                                              
+CMD ["python3"]                                                                                                                                                 
+ENV PYTHON_SHA256=b5796915dc45ff745cfb4e990a7e7c93d6f546328a102ce31448d69ebc37575c                                                                              
+ENV PYTHON_VERSION=3.12.16                                                                                                                                      
+ENV GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305                                                                                                            
+ENV LANG=C.UTF-8                                                                                                                                                
+ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin                                                                            

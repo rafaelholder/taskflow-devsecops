@@ -32,6 +32,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 COPY --from=build /install /usr/local
 
+# Correcao pontual: CVE-2026-85091 (zlib, heap overflow em gz_vacate, HIGH) tem patch no
+# Debian 13 mas o digest atual da imagem base ainda nao o inclui. Versao fixada para manter o
+# build reprodutivel. Remover quando o Dependabot (ecossistema docker) trouxer um digest novo.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade "zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1" \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system --gid 10001 taskflow \
     && useradd --system --uid 10001 --gid taskflow --no-create-home --shell /usr/sbin/nologin taskflow \
     && mkdir -p /app/data /app/logs \

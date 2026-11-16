@@ -3,6 +3,7 @@
 {% block cabecalho %}Login{% endblock %}
 {% block conteudo %}
     <form method="post" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Usuario: <input type="text" name="username" maxlength="150" required></label><br>
         <label>Senha: <input type="password" name="password" required></label><br>
         <input type="submit" value="Entrar">

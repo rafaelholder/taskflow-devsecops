@@ -1,0 +1,109 @@
+{
+  "uid": "taskflow-seguranca",
+  "title": "TaskFlow - Segurança",
+  "tags": ["taskflow", "seguranca"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Q1 · Falhas de login por IP (janela de 1 min) — limiar do runbook: 20",
+      "gridPos": { "x": 0, "y": 0, "w": 16, "h": 9 },
+      "datasource": { "type": "loki", "uid": "loki-taskflow" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (ip) (count_over_time({job=\"taskflow\", event=\"login_attempt\", result=\"failure\"} | json [1m]))",
+          "legendFormat": "{{ip}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "thresholdsStyle": { "mode": "line+area" } },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Q2 · Usuários-alvo de falhas (5 min)",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 9 },
+      "datasource": { "type": "loki", "uid": "loki-taskflow" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (username) (count_over_time({job=\"taskflow\", event=\"login_attempt\", result=\"failure\"} | json [5m]))",
+          "legendFormat": "{{username}}",
+          "instant": true
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value_and_name" }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Q3 · Respostas HTTP por status (1 min)",
+      "gridPos": { "x": 0, "y": 9, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "loki-taskflow" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status_code) (count_over_time({job=\"taskflow\", event=\"http_request\"} | json [1m]))",
+          "legendFormat": "{{status_code}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Q4 · Login bem-sucedido logo após rajada de falhas (comprometimento?)",
+      "gridPos": { "x": 12, "y": 9, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "loki-taskflow" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (ip) (count_over_time({job=\"taskflow\", event=\"login_attempt\", result=\"success\"} | json [1m]))",
+          "legendFormat": "sucesso {{ip}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "logs",
+      "title": "Q5 · Buscas com caracteres de injeção (varredura de payloads no parâmetro q)",
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 9 },
+      "datasource": { "type": "loki", "uid": "loki-taskflow" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{job=\"taskflow\", event=\"tasks_list_accessed\"} | json | search=~\".*(<|>|'|--|(?i)union|(?i)select).*\""
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "logs",
+      "title": "Q6 · Eventos de segurança (falhas de login e CSRF recusado)",
+      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 9 },
+      "datasource": { "type": "loki", "uid": "loki-taskflow" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{job=\"taskflow\", event=~\"login_attempt|csrf_rejected\", level=\"WARNING\"} | json | line_format \"{{.timestamp}} {{.event}} ip={{.ip}} user={{.username}} req={{.request_id}}\""
+        }
+      ]
+    }
+  ]
+}

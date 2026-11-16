@@ -1,0 +1,5 @@
+# /debug/info na linha de base (Flask 0.12.2, debug=True)
+HTTP=500
+Werkzeug Debugger interativo exposto: 1  (>0 = sim; permite execucao de codigo com o PIN)
+Pagina contem o traceback com o codigo-fonte da rota: 0
+/debug/info na versao corrigida: HTTP 404

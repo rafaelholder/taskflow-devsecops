@@ -1,0 +1,132 @@
+# Ambiente da TaskFlow com a stack de observabilidade (Módulos 5 e 6).
+#
+#   frontend (bridge)          backend (internal: sem rota para fora)
+#   ┌──────────────┐           ┌──────────────────────────────────────┐
+#   │ taskflow :5000│──logs──▶ │ promtail ──▶ loki (banco de logs)    │
+#   │ grafana  :3000│◀─consulta│                                      │
+#   └──────────────┘           └──────────────────────────────────────┘
+#   Só taskflow e grafana publicam porta, e apenas em 127.0.0.1 (nunca 0.0.0.0).
+#   O Loki - o "banco" deste ambiente - não tem porta no host e vive numa rede interna.
+#   A TaskFlow usa SQLite num volume nomeado: não há servidor de banco nem porta de banco.
+#
+# Segredos: TODOS vêm do .env (fora do Git). O Compose recusa subir se faltar algum
+# (sintaxe ${VAR:?mensagem}). Modelo versionado: .env.example.
+#
+# Uso:  cp .env.example .env   (preencha)   &&   docker compose up -d --build
+
+x-endurecido: &endurecido
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  taskflow:
+    <<: *endurecido
+    build: .
+    image: taskflow:local
+    environment:
+      TASKFLOW_SECRET_KEY: ${TASKFLOW_SECRET_KEY:?defina TASKFLOW_SECRET_KEY no .env}
+      TASKFLOW_SEED_USERS: ${TASKFLOW_SEED_USERS:-1}
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - taskflow_dados:/app/data
+      - taskflow_logs:/app/logs
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    networks: [frontend]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/healthz', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits: { cpus: "0.50", memory: 256M, pids: 128 }
+        reservations: { memory: 64M }
+
+  loki:
+    <<: *endurecido
+    image: grafana/loki@sha256:31628519045e7f28692a7ae73b4a3fd293dccb425585ed5d16ceea3b5c9592e6 # 3.5.5
+    command: -config.file=/etc/loki/local-config.yaml
+    user: "10001:10001"
+    volumes:
+      - loki_dados:/loki
+    tmpfs:
+      - /tmp:size=16m
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3100/ready | grep -q ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "0.50", memory: 512M }
+
+  promtail:
+    <<: *endurecido
+    image: grafana/promtail@sha256:784743d283f71f644e290d7b9fadf5e1edff405d2756974c6e13fa7978c08b64 # 3.5.5
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./observabilidade/promtail-config.yml:/etc/promtail/config.yml:ro
+      - taskflow_logs:/var/log/taskflow:ro
+      - promtail_posicoes:/var/lib/promtail
+    networks: [backend]
+    depends_on:
+      loki: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 128M }
+
+  grafana:
+    <<: *endurecido
+    image: grafana/grafana@sha256:35c41e0fd0295f5d0ee5db7e780cf33506abfaf47686196f825364889dee878b # 12.2.1
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?defina GRAFANA_ADMIN_PASSWORD no .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_dados:/var/lib/grafana
+      - ./observabilidade/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observabilidade/grafana/dashboards:/var/lib/grafana-dashboards:ro
+    tmpfs:
+      - /tmp:size=16m
+    networks: [frontend, backend]
+    depends_on:
+      loki: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:3000/api/health | grep -q ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "0.50", memory: 256M }
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true # Loki e Promtail sem saída para a internet e sem porta no host
+
+volumes:
+  taskflow_dados:
+  taskflow_logs:
+  loki_dados:
+  promtail_posicoes:
+  grafana_dados:

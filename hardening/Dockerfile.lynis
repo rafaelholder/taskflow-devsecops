@@ -1,0 +1,36 @@
+# Módulo 2 / Encontro 3 — container Ubuntu auditado pelo Lynis, ANTES e DEPOIS do hardening.
+#   docker build --target antes  -t lynis:antes  -f hardening/Dockerfile.lynis hardening
+#   docker build --target depois -t lynis:depois -f hardening/Dockerfile.lynis hardening
+#   (ou simplesmente: bash hardening/lynis-antes-depois.sh)
+#
+# Excecoes justificadas aos scanners de IaC (este NAO e um container de aplicacao):
+#checkov:skip=CKV_DOCKER_3:o Lynis audita o SO inteiro (/etc/shadow, sudoers, kernel) e exige root; container efemero, roda e sai
+#checkov:skip=CKV_DOCKER_2:container de auditoria executa um comando e encerra; nao ha servico para healthcheck
+# Trivy config: esta pasta e excluida (skip-dirs) no iac-scan.yml pelo mesmo motivo (AVD-DS-0002).
+
+FROM ubuntu:24.04 AS antes
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends lynis \
+    && rm -rf /var/lib/apt/lists/*
+CMD ["lynis", "audit", "system", "--quick", "--no-colors"]
+
+FROM antes AS depois
+# Achado 1 - AUTH-9328: umask padrao 022 deixa arquivos novos legiveis por todos.
+#   027: grupo le, "outros" nao leem nada (CIS Ubuntu 5.4.4).
+# Achado 2 - AUTH-9230: hashing de senha com rounds padrao. Mais rounds de SHA-512
+#   encarecem cada tentativa de quebra offline do /etc/shadow (CIS 5.4.1.4).
+# Achado 3 - AUTH-9286: senhas sem idade minima/maxima (CIS 5.4.1.1 e 5.4.1.2).
+RUN sed -i -E 's/^UMASK\s+.*/UMASK\t\t027/' /etc/login.defs \
+    && sed -i -E 's/^PASS_MAX_DAYS\s+.*/PASS_MAX_DAYS\t90/' /etc/login.defs \
+    && sed -i -E 's/^PASS_MIN_DAYS\s+.*/PASS_MIN_DAYS\t1/' /etc/login.defs \
+    && sed -i -E 's/^#?\s*SHA_CRYPT_MIN_ROUNDS.*/SHA_CRYPT_MIN_ROUNDS\t65536/' /etc/login.defs \
+    && sed -i -E 's/^#?\s*SHA_CRYPT_MAX_ROUNDS.*/SHA_CRYPT_MAX_ROUNDS\t65536/' /etc/login.defs \
+    && grep -q '^SHA_CRYPT_MIN_ROUNDS' /etc/login.defs || printf 'SHA_CRYPT_MIN_ROUNDS\t65536\nSHA_CRYPT_MAX_ROUNDS\t65536\n' >> /etc/login.defs
+# Achado 4 - KRNL-5820: core dumps podem gravar memoria de processo (com segredos) em disco.
+RUN printf '* hard core 0\n* soft core 0\n' > /etc/security/limits.d/10-sem-core-dump.conf
+# Achado 5 - DEB-0280: libpam-tmpdir da a cada sessao um $TMPDIR privado (evita corrida em /tmp).
+#            PKGS-7370: debsums permite verificar a integridade dos pacotes instalados.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpam-tmpdir debsums \
+    && rm -rf /var/lib/apt/lists/*

@@ -6,6 +6,7 @@
         <p role="alert" style="color:red">{{ error }}</p>
     {% endif %}
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Titulo: <input type="text" name="title" maxlength="200" required></label><br>
         <label>Descricao: <textarea name="description" maxlength="2000"></textarea></label><br>
         <input type="submit" value="Salvar">

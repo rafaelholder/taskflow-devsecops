@@ -36,7 +36,7 @@ jobs:
           echo "USER efetivo: $(docker inspect --format '{{.Config.User}}' taskflow:ci)"
           test "$(docker inspect --format '{{.Config.User}}' taskflow:ci)" = "taskflow"
 
-      - name: Trivy image (gate: HIGH,CRITICAL com correção disponível)
+      - name: "Trivy image (gate: HIGH,CRITICAL com correção disponível)"
         # ignore-unfixed: a imagem base Debian carrega CVEs sem patch do fornecedor; bloquear
         # por elas tornaria o gate permanente e inútil. O que TEM correção bloqueia.
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

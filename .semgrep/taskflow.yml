@@ -48,14 +48,31 @@ rules:
     metadata:
       cwe: "CWE-532"
 
+  # Nao depende de taint: o p/python (tainted-sql-string) perde o rastro quando a entrada passa
+  # por um fatiamento como request.args.get("q")[:100] - verificado no PR de demonstracao.
+  # Esta regra olha so a FORMA da consulta, montada direto no execute() ou numa variavel antes.
   - id: taskflow-sql-concatenado
     languages: [python]
-    patterns:
-      - pattern-either:
-          - pattern: $DB.execute($A + $B, ...)
-          - pattern: $DB.execute(f"...", ...)
-          - pattern: $DB.execute("..." % $X, ...)
-          - pattern: $DB.execute($S.format(...), ...)
+    pattern-either:
+      - pattern: $DB.execute($A + $B, ...)
+      - pattern: $DB.execute(f"...", ...)
+      - pattern: $DB.execute("..." % $X, ...)
+      - pattern: $DB.execute($S.format(...), ...)
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  $Q = $A + $B
+                  ...
+              - pattern-inside: |
+                  $Q = f"..."
+                  ...
+              - pattern-inside: |
+                  $Q = "..." % $X
+                  ...
+              - pattern-inside: |
+                  $Q = $S.format(...)
+                  ...
+          - pattern: $DB.execute($Q, ...)
     message: SQL montado por concatenacao/formatacao. Use placeholders "?" com parametros.
     severity: ERROR
     metadata:

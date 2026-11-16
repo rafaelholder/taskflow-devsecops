@@ -4,7 +4,7 @@ rules:
   - id: taskflow-template-safe-filter
     languages: [generic]
     paths:
-      include: ["templates/*.html"]
+      include: ["/templates/*.html"] # ancorado na raiz (Semgrepignore v2)
     pattern-regex: '\|\s*safe\b'
     message: >-
       Filtro "| safe" desliga o autoescape do Jinja2 e reabre o XSS armazenado corrigido no

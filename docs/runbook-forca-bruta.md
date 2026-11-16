@@ -2,7 +2,7 @@
 
 **Base:** NIST SP 800-61 Rev. 2 (as quatro fases do ciclo de resposta a incidentes).
 **Dono:** grupo DevSecOps · **Severidade padrão:** Média (Alta se houver login bem-sucedido após a rajada).
-**Exercitado em:** 16/11/2026, ambiente local (`docker compose`), evidência em [`evidencias/incidente/deteccao-loki.txt`](evidencias/incidente/deteccao-loki.txt).
+**Exercitado em:** 16/11/2026, ambiente local (`docker compose`), evidência em [`evidencias/incidente/deteccao-loki.txt`](evidencias/incidente/deteccao-loki.txt) (API do Loki) e [`evidencias/incidente/grafana-forca-bruta.jpg`](evidencias/incidente/grafana-forca-bruta.jpg) (dashboard: T1 com 44 falhas/min de um IP, T2 com o login bem-sucedido em seguida).
 
 ---
 

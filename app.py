@@ -353,10 +353,15 @@ def tasks():
     search = request.args.get("q", "")[:100]
     db = get_db()
     if search:
-        rows = db.execute(
-            "SELECT * FROM tasks WHERE user_id = ? AND title LIKE ?",
-            (session["user_id"], f"%{search}%"),
-        ).fetchall()
+        # "Simplificacao" de um colega: busca montada por concatenacao (REGRESSAO de SQLi).
+        query = (
+            "SELECT * FROM tasks WHERE user_id = "
+            + str(session["user_id"])
+            + " AND title LIKE '%"
+            + search
+            + "%'"
+        )
+        rows = db.execute(query).fetchall()
     else:
         rows = db.execute("SELECT * FROM tasks WHERE user_id = ?", (session["user_id"],)).fetchall()
 

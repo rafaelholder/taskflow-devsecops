@@ -1,6 +1,7 @@
-# Revisão obrigatória: a proteção da main exige aprovação de um code owner.
-# Tudo que toca a esteira, a imagem ou a infraestrutura passa pelo grupo inteiro.
-# ⚠️ adicionar os logins dos demais integrantes do grupo.
+# Donos do código: o GitHub pede revisão deles em todo PR que toca estes caminhos.
+# Tudo que mexe na esteira, na imagem ou na infraestrutura passa pelo responsável da esteira.
+# A exigência de aprovação na proteção da main fica em 0 enquanto os demais integrantes não são
+# colaboradores do repositório (ver README, seção 1); com eles adicionados, sobe para 1.
 *                   @rafaelholder
 /.github/           @rafaelholder
 /Dockerfile         @rafaelholder

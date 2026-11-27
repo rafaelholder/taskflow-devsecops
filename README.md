@@ -36,7 +36,7 @@ Fora do CI: **Dependabot** (pip, GitHub Actions e Docker, semanal), **CODEOWNERS
 
 **Proteção da `main`:** PR obrigatório; os 10 checks acima obrigatórios, com a branch atualizada antes do merge; a regra vale **também para administradores** (ninguém faz push direto); histórico linear; conversas resolvidas; sem force push e sem exclusão. Aprovação de revisor: 0 enquanto os demais integrantes não são colaboradores do repositório — com eles adicionados, sobe para 1 aprovação de code owner (`.github/CODEOWNERS`).
 
-**Acesso do professor:** `@HardSource` foi convidado como colaborador. Em repositório pessoal o GitHub não oferece o nível *Read* (só organizações têm permissões granulares); a proteção acima impede qualquer alteração na `main` sem PR e checks verdes.
+**Acesso do professor:** o repositório é **público** desde 27/11, então a leitura não depende de convite. Em repositório pessoal o GitHub não oferece o nível *Read* para colaboradores (só organizações têm permissões granulares); abrir o repositório foi a forma de dar acesso só de leitura. A proteção acima impede qualquer alteração na `main` sem PR e checks verdes.
 
 ### Disparar cada workflow
 

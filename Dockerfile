@@ -12,7 +12,7 @@
 # Extra: multi-stage (sem pip/cache na imagem final), HEALTHCHECK, PYTHONDONTWRITEBYTECODE.
 
 # ---- estagio 1: resolve dependencias ---------------------------------------
-FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b AS build
+FROM python:3.15-slim@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5 AS build
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -23,7 +23,7 @@ COPY requirements.txt .
 RUN pip install --require-hashes --no-deps --prefix=/install -r requirements.txt
 
 # ---- estagio 2: imagem final ------------------------------------------------
-FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b AS runtime
+FROM python:3.15-slim@sha256:63bb298d2b7b88f176f51b5189f54ce6535c997682ea70885d2132f5d473a8a5 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

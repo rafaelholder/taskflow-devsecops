@@ -250,7 +250,6 @@ def finalizar_requisicao(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cache-Control"] = "no-store"
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"

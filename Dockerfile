@@ -32,11 +32,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 COPY --from=build /install /usr/local
 
-# Correcao pontual: CVE-2026-85091 (zlib, heap overflow em gz_vacate, HIGH) tem patch no
-# Debian 13 mas o digest atual da imagem base ainda nao o inclui. Versao fixada para manter o
-# build reprodutivel. Remover quando o Dependabot (ecossistema docker) trouxer um digest novo.
+# Correcao pontual: duas CVEs HIGH com patch no Debian 13 que o digest atual da imagem base
+# ainda nao inclui. Versoes fixadas para manter o build reprodutivel. Remover quando o
+# Dependabot (ecossistema docker) trouxer um digest novo.
+#   CVE-2026-85091  zlib1g   heap overflow em gz_vacate
+#   CVE-2026-124851 libzstd1 vazamento de informacao por buffer nao inicializado (27/11)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends --only-upgrade "zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1" \
+    && apt-get install -y --no-install-recommends --only-upgrade \
+        "zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1" \
+        "libzstd1=1.5.7+dfsg-1+deb13u1" \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system --gid 10001 taskflow \
